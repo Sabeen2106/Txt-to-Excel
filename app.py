@@ -29,18 +29,20 @@ if uploaded_files:
 
     for file in uploaded_files:
         try:
-            sep = get_sep(separator)
+        sep = get_sep(separator)
 
-            if sep:
-                df = pd.read_csv(file, sep=sep)
-            else:
-                df = pd.read_csv(file, sep=None, engine="python")
+        if sep:
+            df = pd.read_csv(file, sep=sep)
+        else:
+            df = pd.read_csv(file, sep=None, engine="python")
 
-            df["source_file"] = file.name
-            all_data.append(df)
+        # Add filename as last column
+        df.insert(len(df.columns), "source_file", file.name)
+
+        all_data.append(df)
 
         except Exception as e:
-            st.error(f"Could not read {file.name}: {e}")
+        st.error(f"Could not read {file.name}: {e}")
 
     if all_data:
         final_df = pd.concat(all_data, ignore_index=True)

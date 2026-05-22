@@ -1,21 +1,26 @@
 # app.py
+
 import streamlit as st
 import pandas as pd
 from io import BytesIO
 
+# App Title
 st.title("Text Files to Excel Converter")
 
+# File Upload
 uploaded_files = st.file_uploader(
-    "Upload text files",
+    "Upload text or CSV files",
     type=["txt", "csv"],
     accept_multiple_files=True
 )
 
+# Separator Selection
 separator = st.selectbox(
     "Choose file separator",
     ["Auto detect", "Comma (,)", "Tab", "Pipe (|)", "Semicolon (;)"]
 )
 
+# Function to map separators
 def get_sep(choice):
     return {
         "Comma (,)": ",",
@@ -24,37 +29,52 @@ def get_sep(choice):
         "Semicolon (;)": ";"
     }.get(choice, None)
 
+# Process Files
 if uploaded_files:
+
     all_data = []
 
     for file in uploaded_files:
+
         try:
-        sep = get_sep(separator)
+            sep = get_sep(separator)
 
-        if sep:
-            df = pd.read_csv(file, sep=sep)
-        else:
-            df = pd.read_csv(file, sep=None, engine="python")
+            # Read files
+            if sep:
+                df = pd.read_csv(file, sep=sep)
+            else:
+                df = pd.read_csv(file, sep=None, engine="python")
 
-        # Add filename as last column
-        df.insert(len(df.columns), "source_file", file.name)
+            # Add filename as LAST column
+            df.insert(len(df.columns), "source_file", file.name)
 
-        all_data.append(df)
+            # Store dataframe
+            all_data.append(df)
 
         except Exception as e:
-        st.error(f"Could not read {file.name}: {e}")
+            st.error(f"Could not read {file.name}: {e}")
 
+    # Combine all files
     if all_data:
+
         final_df = pd.concat(all_data, ignore_index=True)
 
         st.success(f"Successfully processed {len(all_data)} files")
+
+        # Preview Data
         st.dataframe(final_df)
 
+        # Create Excel file in memory
         output = BytesIO()
 
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
-            final_df.to_excel(writer, index=False, sheet_name="Combined_Data")
+            final_df.to_excel(
+                writer,
+                index=False,
+                sheet_name="Combined_Data"
+            )
 
+        # Download Button
         st.download_button(
             label="Download Excel File",
             data=output.getvalue(),

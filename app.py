@@ -4,77 +4,77 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 
-# App Title
 st.title("Text Files to Excel Converter")
 
-# File Upload
 uploaded_files = st.file_uploader(
-    "Upload text or CSV files",
+    "Upload text files",
     type=["txt", "csv"],
     accept_multiple_files=True
 )
 
-# Separator Selection
-separator = st.selectbox(
-    "Choose file separator",
-    ["Auto detect", "Comma (,)", "Tab", "Pipe (|)", "Semicolon (;)"]
-)
-
-# Function to map separators
-def get_sep(choice):
-    return {
-        "Comma (,)": ",",
-        "Tab": "\t",
-        "Pipe (|)": "|",
-        "Semicolon (;)": ";"
-    }.get(choice, None)
-
-# Process Files
 if uploaded_files:
-
     all_data = []
 
+    column_names = [
+        "Record_Type",
+        "Line_Number",
+        "Type_1",
+        "Customer_Code",
+        "Type_2",
+        "Destination_Code",
+        "Type_3",
+        "Country_Code",
+        "Date",
+        "Quantity",
+        "Reference_Number",
+        "Blank_Field",
+        "Company_Name",
+        "Extra_1",
+        "Extra_2",
+        "Extra_3",
+        "Extra_4",
+        "Extra_5",
+        "Extra_6",
+        "Extra_7",
+        "Extra_8",
+        "Extra_9",
+        "End_Record",
+        "File_Name"
+    ]
+
     for file in uploaded_files:
-
         try:
-            sep = get_sep(separator)
+            df = pd.read_csv(
+                file,
+                sep="^",
+                header=None,
+                dtype=str,
+                engine="python"
+            )
 
-            # Read files
-            if sep:
-                df = pd.read_csv(file, sep=sep)
-            else:
-                df = pd.read_csv(file, sep=None, engine="python")
+            df = df.iloc[:, :23]
+            df.columns = column_names[:-1]
 
-            # Add filename as LAST column
-            df.insert(len(df.columns), "source_file", file.name)
+            df["Company_Name"] = df["Company_Name"].str.strip()
 
-            # Store dataframe
+            df.insert(len(df.columns), "File_Name", file.name)
+
             all_data.append(df)
 
         except Exception as e:
             st.error(f"Could not read {file.name}: {e}")
 
-    # Combine all files
     if all_data:
-
         final_df = pd.concat(all_data, ignore_index=True)
 
         st.success(f"Successfully processed {len(all_data)} files")
-
-        # Preview Data
         st.dataframe(final_df)
 
-        # Create Excel file in memory
         output = BytesIO()
 
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
-            final_df.to_excel(
-                writer,
-                index=False,
-                sheet_name="Combined_Data"
-            )
+            final_df.to_excel(writer, index=False, sheet_name="Combined_Data")
 
-        # Download Button
         st.download_button(
             label="Download Excel File",
             data=output.getvalue(),

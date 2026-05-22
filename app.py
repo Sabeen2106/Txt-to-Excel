@@ -12,35 +12,33 @@ uploaded_files = st.file_uploader(
     accept_multiple_files=True
 )
 
+base_column_names = [
+    "Record_Type",
+    "Line_Number",
+    "Type_1",
+    "Customer_Code",
+    "Type_2",
+    "Destination_Code",
+    "Type_3",
+    "Country_Code",
+    "Date",
+    "Quantity",
+    "Reference_Number",
+    "Blank_Field",
+    "Company_Name",
+    "Extra_1",
+    "Extra_2",
+    "Extra_3",
+    "Extra_4",
+    "Extra_5",
+    "Extra_6",
+    "Extra_7",
+    "Extra_8",
+    "End_Record"
+]
+
 if uploaded_files:
     all_data = []
-
-    column_names = [
-        "Record_Type",
-        "Line_Number",
-        "Type_1",
-        "Customer_Code",
-        "Type_2",
-        "Destination_Code",
-        "Type_3",
-        "Country_Code",
-        "Date",
-        "Quantity",
-        "Reference_Number",
-        "Blank_Field",
-        "Company_Name",
-        "Extra_1",
-        "Extra_2",
-        "Extra_3",
-        "Extra_4",
-        "Extra_5",
-        "Extra_6",
-        "Extra_7",
-        "Extra_8",
-        "Extra_9",
-        "End_Record",
-        "File_Name"
-    ]
 
     for file in uploaded_files:
         try:
@@ -49,15 +47,33 @@ if uploaded_files:
                 sep="^",
                 header=None,
                 dtype=str,
-                engine="python"
+                engine="python",
+                encoding="latin1"
             )
 
-            df = df.iloc[:, :23]
-            df.columns = column_names[:-1]
+            df = df.fillna("")
 
-            df["Company_Name"] = df["Company_Name"].str.strip()
+            # Create column names based on actual number of columns
+            column_names = base_column_names[:len(df.columns)]
 
-            df.insert(len(df.columns), "File_Name", file.name)
+            # If file has more columns than expected, add extra column names
+            if len(df.columns) > len(base_column_names):
+                extra_cols = [
+                    f"Extra_{i}" for i in range(
+                        len(base_column_names) + 1,
+                        len(df.columns) + 1
+                    )
+                ]
+                column_names = base_column_names + extra_cols
+
+            df.columns = column_names
+
+            # Clean company name if column exists
+            if "Company_Name" in df.columns:
+                df["Company_Name"] = df["Company_Name"].str.strip()
+
+            # Add filename as LAST column
+            df["File_Name"] = file.name
 
             all_data.append(df)
 
@@ -73,7 +89,11 @@ if uploaded_files:
         output = BytesIO()
 
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
-            final_df.to_excel(writer, index=False, sheet_name="Combined_Data")
+            final_df.to_excel(
+                writer,
+                index=False,
+                sheet_name="Combined_Data"
+            )
 
         st.download_button(
             label="Download Excel File",
